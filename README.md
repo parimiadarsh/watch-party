@@ -6,7 +6,7 @@ Monorepo: **React (Vite)** UI, **Spring Boot** backend with **WebSocket** rooms,
 
 - **Rooms** – same UUID for everyone in the watch party.
 - **Screen share** – WebRTC (with STUN); signaling and chat go through the server WebSocket at `/ws`.
-- **Synced playback** – shared play / pause / seek and “load this URL for everyone” for direct video files (e.g. MP4).
+- **Synced playback** – **Streaming sync** for Netflix, Prime, Disney+, etc. (everyone watches on their own account; the room relays play / pause / seek cues with the same control rules as direct video). **Direct video** mode loads a shared MP4 URL in the browser.
 - **Chat** – messages broadcast to everyone in the room.
 - **Google sign-in (optional)** – save room ids under your account; **Reconnect** from the lobby. Data is stored in a local **H2** database on the server (`backend/data/`) and sessions use a signed **JWT**.
 
@@ -17,28 +17,51 @@ Monorepo: **React (Vite)** UI, **Spring Boot** backend with **WebSocket** rooms,
 
 ## Google sign-in setup (saved rooms)
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), create an OAuth **Web application** client.
-2. **Authorized JavaScript origins**: `http://localhost:5173` (and your production UI origin later).
-3. Copy the **Client ID** string.
+### 1. Google Cloud Console
 
-**Backend** – set the same client id and a long random JWT secret (32+ characters):
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → pick the **same project** that owns your client id.
+2. **APIs & Services** → **OAuth consent screen** — finish setup (External is fine; add yourself as a **Test user** while in “Testing”).
+3. **APIs & Services** → **Credentials** → **Create credentials** → **OAuth client ID**.
+4. Application type must be **Web application** (not Desktop, Android, or iOS).
+5. Under **Authorized JavaScript origins**, add **exactly** (no path, no trailing slash):
 
-```bash
-set GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
-set JWT_SECRET=replace-with-a-long-random-secret-at-least-32-chars
+   ```
+   http://localhost:5173
+   http://127.0.0.1:5173
+   ```
+
+   Use the same host you open in the browser. If the address bar says `http://127.0.0.1:5173`, that origin must be listed (and vice versa for `localhost`).
+
+6. Under **Authorized redirect URIs** (optional but helps some flows), you can also add:
+
+   ```
+   http://localhost:5173
+   http://127.0.0.1:5173
+   ```
+
+7. Save, then copy the **Client ID** (ends with `.apps.googleusercontent.com`).
+
+### 2. This repo
+
+**Frontend** — `frontend/.env.development`:
+
+```
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
-Linux/macOS: `export GOOGLE_CLIENT_ID=...` and `export JWT_SECRET=...`
+**Backend** — copy `backend/application-local.properties.example` to `backend/application-local.properties` and set the **same** client id, or set `GOOGLE_CLIENT_ID` when starting Spring.
 
-**Frontend** – `frontend/.env.development`:
+Restart **both** `npm run dev` and `spring-boot:run` after changing env files.
 
-```
-VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
-```
+### Troubleshooting: `no registered origin` / `401 invalid_client`
 
-Restart Vite and Spring after changing env vars.
+| Symptom | Fix |
+|--------|-----|
+| **no registered origin** | The URL in your browser is not in **Authorized JavaScript origins**. Open the app at [http://localhost:5173](http://localhost:5173) (Vite is pinned to port **5173**), add that origin in Google Console, wait 1–2 minutes, hard-refresh. |
+| **invalid_client** | Wrong client id, wrong client **type** (must be Web), or id from a different GCP project. Client id in `.env.development` must match Credentials exactly. |
+| Still failing | Confirm you did not create a “Chrome extension” or “Desktop” client. Delete old clients and create a new **Web application** client if unsure. |
 
-Without these variables, the app works as before; the lobby explains that Google save is disabled.
+Without Google env vars, the app still works as a guest; only saved rooms need sign-in.
 
 ## Run
 

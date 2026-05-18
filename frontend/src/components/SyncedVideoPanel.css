@@ -1,8 +1,10 @@
 .syncvid {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 1.25rem;
-  background: color-mix(in srgb, var(--bg) 92%, var(--code-bg));
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
   text-align: left;
 }
 
@@ -15,7 +17,7 @@
   margin: 0 0 1rem;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 .syncvid__row {
@@ -28,28 +30,93 @@
 .syncvid__url {
   flex: 1;
   min-width: 200px;
-  font: inherit;
   padding: 0.5rem 0.6rem;
-  border-radius: 8px;
+}
+
+.syncvid__controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.syncvid__fieldset {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.syncvid__fieldset legend {
+  padding: 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.syncvid__radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.syncvid__radio + .syncvid__radio {
+  margin-top: 0.45rem;
+}
+
+.syncvid__radio strong {
   color: var(--text-h);
+}
+
+.syncvid__ready {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.syncvid__ready-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.syncvid__ready-item {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.syncvid__ready-item--on {
+  border-color: var(--accent-border);
+  color: var(--text-h);
+  background: var(--accent-bg);
+}
+
+.syncvid__hint--warn {
+  color: #fbbf24;
 }
 
 .syncvid__video {
   width: 100%;
   max-height: 420px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: #000;
+  border: 1px solid var(--border);
 }
 
-.syncvid .btn.secondary {
-  font: inherit;
-  cursor: pointer;
-  border-radius: 8px;
-  padding: 0.45rem 0.85rem;
-  font-weight: 600;
-  background: var(--social-bg);
-  color: var(--text-h);
-  border: 1px solid var(--border);
+.syncvid__video--locked {
+  pointer-events: none;
+  opacity: 0.92;
 }

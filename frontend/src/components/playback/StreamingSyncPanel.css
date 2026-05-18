@@ -1,0 +1,139 @@
+.stream-sync {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.stream-sync__header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+}
+
+.stream-sync__lede {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.stream-sync__platform {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.stream-sync__platform select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-h);
+}
+
+.stream-sync__status {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  border: 1px solid var(--border);
+}
+
+.stream-sync__status--playing {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.stream-sync__status--paused {
+  border-color: var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.stream-sync__cue {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--accent-border);
+  background: var(--accent-bg);
+  animation: stream-sync-pulse 0.6s ease;
+}
+
+@keyframes stream-sync-pulse {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.stream-sync__cue--pause {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.stream-sync__cue-who {
+  margin: 0 0 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.stream-sync__cue-action {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.stream-sync__transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stream-sync__btn {
+  min-width: 5rem;
+}
+
+.stream-sync__seek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.stream-sync__seek input {
+  width: 6.5rem;
+  font: inherit;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-h);
+}
+
+.stream-sync__steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.stream-sync__steps li + li {
+  margin-top: 0.35rem;
+}

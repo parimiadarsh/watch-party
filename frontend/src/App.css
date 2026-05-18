@@ -2,3 +2,30 @@
   min-height: 100svh;
   box-sizing: border-box;
 }
+
+.app--fit {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 0.75rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.app--fit h1 {
+  font-size: clamp(1.35rem, 3.5vw, 2rem);
+  margin: 0.2rem 0 0.45rem;
+}
+
+.app--fit .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.app--room {
+  padding-bottom: 2rem;
+}

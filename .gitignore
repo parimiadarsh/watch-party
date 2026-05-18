@@ -10,6 +10,8 @@ backend/data/
 .env
 .env.local
 .env.*.local
+frontend/.env.development
+backend/application-local.properties
 
 # IDE / OS
 .idea/

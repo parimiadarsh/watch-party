@@ -1,5 +1,8 @@
 const TOKEN_KEY = 'watchparty-session-jwt'
 const PROFILE_KEY = 'watchparty-google-profile'
+const ENTRY_KEY = 'watchparty-entry'
+
+export type EntryMode = 'guest' | 'google'
 
 export type GoogleProfile = { email: string; name: string }
 
@@ -25,6 +28,7 @@ export function getGoogleProfile(): GoogleProfile | null {
 
 export function setSession(token: string, profile?: GoogleProfile) {
   sessionStorage.setItem(TOKEN_KEY, token)
+  setGoogleEntry()
   if (profile) {
     sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
   }
@@ -33,6 +37,29 @@ export function setSession(token: string, profile?: GoogleProfile) {
 export function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(PROFILE_KEY)
+}
+
+export function getEntryMode(): EntryMode | null {
+  const v = sessionStorage.getItem(ENTRY_KEY)
+  return v === 'guest' || v === 'google' ? v : null
+}
+
+export function setGuestEntry() {
+  sessionStorage.setItem(ENTRY_KEY, 'guest')
+  clearSession()
+}
+
+export function setGoogleEntry() {
+  sessionStorage.setItem(ENTRY_KEY, 'google')
+}
+
+export function clearEntry() {
+  sessionStorage.removeItem(ENTRY_KEY)
+}
+
+/** Skip the welcome screen when already signed in or guest continued this session. */
+export function shouldSkipWelcome(): boolean {
+  return !!getSessionToken() || getEntryMode() === 'guest'
 }
 
 export async function signInWithGoogleCredential(credential: string) {

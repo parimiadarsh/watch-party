@@ -1,19 +1,21 @@
 import { useEffect } from 'react'
 import { useWebRtcShare } from '../hooks/useWebRtcShare'
 import { usePartyRoom } from '../hooks/usePartyRoom'
-import { saveRoomVisit } from '../lib/accountApi'
+import { getSessionToken, saveRoomVisit } from '../lib/accountApi'
 import { ChatPanel } from './ChatPanel'
 import { ScreenShareStage } from './ScreenShareStage'
-import { SyncedVideoPanel } from './SyncedVideoPanel'
+import { PlaybackWatchSection } from './playback/PlaybackWatchSection'
 import './RoomView.css'
 
 type Props = {
   roomId: string
   displayName: string
   onLeave: () => void
+  onSignOut: () => void
 }
 
-export function RoomView({ roomId, displayName, onLeave }: Props) {
+export function RoomView({ roomId, displayName, onLeave, onSignOut }: Props) {
+  const signedIn = !!getSessionToken()
   useEffect(() => {
     void saveRoomVisit(roomId)
   }, [roomId])
@@ -33,7 +35,7 @@ export function RoomView({ roomId, displayName, onLeave }: Props) {
     <div className="room">
       <header className="room__bar">
         <div className="room__title">
-          <p className="eyebrow">Room</p>
+          <p className="eyebrow">Now streaming</p>
           <p className="room__id" title={roomId}>
             {roomId}
           </p>
@@ -46,9 +48,16 @@ export function RoomView({ roomId, displayName, onLeave }: Props) {
             )}
           </p>
         </div>
-        <button type="button" className="btn ghost" onClick={onLeave}>
-          Leave
-        </button>
+        <div className="room__actions">
+          {signedIn && (
+            <button type="button" className="btn ghost" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
+          <button type="button" className="btn ghost" onClick={onLeave}>
+            Leave
+          </button>
+        </div>
       </header>
 
       <p className="room__peers">
@@ -67,9 +76,14 @@ export function RoomView({ roomId, displayName, onLeave }: Props) {
             onStartShare={rtc.startSharing}
             onStopShare={rtc.stopSharing}
           />
-          <SyncedVideoPanel
+          <PlaybackWatchSection
             clientId={room.clientId}
-            sendPlayback={room.sendPlayback}
+            displayName={displayName}
+            peers={room.peers}
+            playbackControl={room.playbackControl}
+            sendPlaybackIntent={room.sendPlaybackIntent}
+            setPlaybackMode={room.setPlaybackMode}
+            setController={room.setController}
             subscribePlayback={room.subscribePlayback}
           />
         </div>

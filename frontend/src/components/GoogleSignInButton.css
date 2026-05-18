@@ -1,0 +1,24 @@
+.google-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.google-signin--compact {
+  align-items: flex-end;
+}
+
+.google-signin__error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b91c1c;
+  max-width: 220px;
+  text-align: right;
+}
+
+@media (prefers-color-scheme: dark) {
+  .google-signin__error {
+    color: #fca5a5;
+  }
+}

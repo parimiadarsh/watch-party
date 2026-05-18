@@ -1,0 +1,3 @@
+# Copy to application-local.properties in this folder (backend root).
+# Same client id as frontend VITE_GOOGLE_CLIENT_ID.
+watchparty.google.client-id=your-client-id.apps.googleusercontent.com

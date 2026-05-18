@@ -24,7 +24,7 @@ export function ChatPanel({ messages, onSend }: Props) {
 
   return (
     <aside className="chat">
-      <h2 className="chat__title">Chat</h2>
+      <h2 className="chat__title">Live reactions</h2>
       <ul className="chat__list" aria-live="polite">
         {messages.map((m, i) => (
           <li

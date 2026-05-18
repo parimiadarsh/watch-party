@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Component;
@@ -15,6 +16,8 @@ import org.springframework.web.socket.WebSocketSession;
 public class RoomRegistry {
 
 	private final ConcurrentHashMap<String, ConcurrentHashMap<String, WebSocketSession>> rooms = new ConcurrentHashMap<>();
+
+	private final ConcurrentHashMap<String, PlaybackControlState> playbackByRoom = new ConcurrentHashMap<>();
 
 	public void add(String roomId, String clientId, WebSocketSession session) {
 		rooms.computeIfAbsent(roomId, r -> new ConcurrentHashMap<>()).put(clientId, session);
@@ -31,9 +34,34 @@ public class RoomRegistry {
 			return;
 		}
 		room.remove(clientId, session);
+		PlaybackControlState playback = playbackByRoom.get(roomId);
+		if (playback != null) {
+			playback.removePlayReady(clientId);
+			if (clientId.equals(playback.getControllerId())) {
+				playback.setControllerId(room.isEmpty() ? null : room.keySet().iterator().next());
+			}
+		}
 		if (room.isEmpty()) {
 			rooms.remove(roomId, room);
+			playbackByRoom.remove(roomId);
 		}
+	}
+
+	public PlaybackControlState playbackState(String roomId) {
+		return playbackByRoom.computeIfAbsent(roomId, k -> new PlaybackControlState());
+	}
+
+	public int peerCount(String roomId) {
+		ConcurrentHashMap<String, WebSocketSession> room = rooms.get(roomId);
+		return room == null ? 0 : room.size();
+	}
+
+	public Set<String> peerIds(String roomId) {
+		ConcurrentHashMap<String, WebSocketSession> room = rooms.get(roomId);
+		if (room == null || room.isEmpty()) {
+			return Collections.emptySet();
+		}
+		return Set.copyOf(room.keySet());
 	}
 
 	public List<PeerView> peersExcept(String roomId, String exceptClientId) {
@@ -63,6 +91,10 @@ public class RoomRegistry {
 			}
 			send(e.getValue(), json);
 		}
+	}
+
+	public void broadcastAll(String roomId, String json) {
+		broadcastExcept(roomId, null, json);
 	}
 
 	public void sendTo(String roomId, String targetClientId, String json) {

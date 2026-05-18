@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type MouseEvent } from 'react'
-import { GoogleLogin, googleLogout } from '@react-oauth/google'
-import type { CredentialResponse } from '@react-oauth/google'
+import { googleLogout } from '@react-oauth/google'
 import {
   clearSession,
   deleteSavedRoom,
@@ -9,13 +8,14 @@ import {
   getSessionToken,
   isGoogleConfigured,
   saveRoomVisit,
-  signInWithGoogleCredential,
   type SavedRoom,
 } from '../lib/accountApi'
+import { GoogleSignInButton } from './GoogleSignInButton'
 import './Lobby.css'
 
 type Props = {
   onJoin: (roomId: string, displayName: string) => void
+  onBack: () => void
 }
 
 function formatSavedTitle(r: SavedRoom) {
@@ -24,7 +24,7 @@ function formatSavedTitle(r: SavedRoom) {
   return `${r.roomId.slice(0, 8)}…${r.roomId.slice(-4)}`
 }
 
-export function Lobby({ onJoin }: Props) {
+export function Lobby({ onJoin, onBack }: Props) {
   const [roomId, setRoomId] = useState('')
   const [roomNickname, setRoomNickname] = useState('')
   const [name, setName] = useState(
@@ -33,8 +33,6 @@ export function Lobby({ onJoin }: Props) {
   const [sessionActive, setSessionActive] = useState(() => !!getSessionToken())
   const [profile, setProfile] = useState(() => getGoogleProfile())
   const [savedRooms, setSavedRooms] = useState<SavedRoom[]>([])
-  const [accountMessage, setAccountMessage] = useState<string | null>(null)
-
   const googleEnabled = isGoogleConfigured()
 
   const refreshSaved = useCallback(async () => {
@@ -42,10 +40,15 @@ export function Lobby({ onJoin }: Props) {
       setSavedRooms([])
       return
     }
-    setAccountMessage(null)
     const list = await fetchSavedRooms()
     setSavedRooms(list)
   }, [])
+
+  const onGoogleLogin = useCallback(() => {
+    setSessionActive(true)
+    setProfile(getGoogleProfile())
+    void refreshSaved()
+  }, [refreshSaved])
 
   useEffect(() => {
     if (sessionActive) {
@@ -53,14 +56,17 @@ export function Lobby({ onJoin }: Props) {
     }
   }, [sessionActive, refreshSaved])
 
+  useEffect(() => {
+    if (profile?.name && !name.trim()) {
+      setName(profile.name)
+    }
+  }, [profile?.name, name])
+
   const enterRoom = useCallback(
     async (room: string, dn: string) => {
       sessionStorage.setItem('watchparty-name', dn)
       if (getSessionToken()) {
-        await saveRoomVisit(
-          room,
-          roomNickname.trim() || undefined,
-        )
+        await saveRoomVisit(room, roomNickname.trim() || undefined)
         await refreshSaved()
       }
       onJoin(room, dn)
@@ -86,28 +92,15 @@ export function Lobby({ onJoin }: Props) {
     void enterRoom(room, dn)
   }
 
-  const onGoogleSuccess = async (c: CredentialResponse) => {
-    if (!c.credential) return
-    try {
-      setAccountMessage(null)
-      await signInWithGoogleCredential(c.credential)
-      setSessionActive(true)
-      setProfile(getGoogleProfile())
-      await refreshSaved()
-    } catch (e) {
-      setAccountMessage(
-        e instanceof Error ? e.message : 'Google sign-in failed',
-      )
+  const signOut = () => {
+    if (googleEnabled) {
+      googleLogout()
     }
-  }
-
-  const logout = () => {
-    googleLogout()
     clearSession()
     setSessionActive(false)
     setProfile(null)
     setSavedRooms([])
-    setAccountMessage(null)
+    onBack()
   }
 
   const forgetRoom = async (id: string, e: MouseEvent<HTMLButtonElement>) => {
@@ -118,54 +111,36 @@ export function Lobby({ onJoin }: Props) {
 
   return (
     <div className="lobby">
-      <header className="lobby__header">
-        <p className="eyebrow">Watch party</p>
-        <h1>Join a room</h1>
-        <p className="lede">
-          Use the same room id as your friends to share your screen, sync a
-          video, and chat. Sign in with Google to save rooms and reconnect with
-          one click.
-        </p>
-      </header>
-
-      {googleEnabled && (
-        <div className="lobby__account">
-          {sessionActive && profile ? (
-            <div className="lobby__signed-in">
-              <p>
-                Signed in as <strong>{profile.email}</strong>
-              </p>
-              <button type="button" className="btn secondary" onClick={logout}>
-                Sign out
-              </button>
-            </div>
+      <header className="lobby__top">
+        <button type="button" className="btn ghost lobby__back" onClick={onBack}>
+          ← Back
+        </button>
+        <div className="lobby__top-actions">
+          {sessionActive ? (
+            <button
+              type="button"
+              className="btn ghost lobby__signout"
+              onClick={signOut}
+            >
+              Sign out
+            </button>
           ) : (
-            <div className="lobby__google">
-              <p className="lobby__google-label">Save &amp; restore your rooms</p>
-              <GoogleLogin
-                onSuccess={(c) => void onGoogleSuccess(c)}
-                onError={() =>
-                  setAccountMessage('Google popup failed or was dismissed.')
-                }
-                useOneTap={false}
-              />
-            </div>
-          )}
-          {accountMessage && (
-            <p className="lobby__account-msg" role="alert">
-              {accountMessage}
-            </p>
+            googleEnabled && (
+              <GoogleSignInButton compact onSuccess={onGoogleLogin} />
+            )
           )}
         </div>
-      )}
+      </header>
 
-      {!googleEnabled && (
-        <p className="lobby__hint muted">
-          Google sign-in is optional. To enable saved rooms, add{' '}
-          <code>VITE_GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_ID</code>{' '}
-          (see README).
+      <header className="lobby__header">
+        <p className="eyebrow">K-Drama · C-Drama · Anime</p>
+        <h1>Join the watch party</h1>
+        <p className="lede">
+          {sessionActive && profile
+            ? `Signed in as ${profile.email}. Pick a room or reconnect to a saved binge.`
+            : 'Share a room id with your crew — sync episodes, share your screen, and chat through every plot twist.'}
         </p>
-      )}
+      </header>
 
       {sessionActive && savedRooms.length > 0 && (
         <div className="lobby__saved">
@@ -200,7 +175,7 @@ export function Lobby({ onJoin }: Props) {
         </div>
       )}
 
-      <div className="lobby__card">
+      <div className="lobby__card glass-card">
         <label className="field">
           <span>Your name</span>
           <input
@@ -222,11 +197,24 @@ export function Lobby({ onJoin }: Props) {
               spellCheck={false}
               autoComplete="off"
             />
-            <button type="button" className="btn secondary" onClick={() => setRoomId(crypto.randomUUID())}>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => setRoomId(crypto.randomUUID())}
+            >
               New id
             </button>
           </div>
         </label>
+
+        {!sessionActive && googleEnabled && (
+          <div className="lobby__google-cta">
+            <p className="lobby__google-cta-text">
+              Sign in with Google to save rooms and reconnect later.
+            </p>
+            <GoogleSignInButton onSuccess={onGoogleLogin} />
+          </div>
+        )}
 
         {sessionActive && (
           <label className="field">
@@ -247,3 +235,4 @@ export function Lobby({ onJoin }: Props) {
     </div>
   )
 }
+

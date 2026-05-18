@@ -24,6 +24,19 @@ export type SignalMessage = {
   payload: SignalPayload
 }
 
+export type PlaybackControlMode = 'single' | 'dual'
+
+export type PlaybackControlState = {
+  controlMode: PlaybackControlMode
+  controllerId: string | null
+  playReady: string[]
+  peerCount: number
+}
+
+export type PlaybackControlStateMessage = {
+  type: 'playback-control-state'
+} & PlaybackControlState
+
 export type PlaybackMessage = {
   type: 'playback'
   fromId: string
@@ -44,9 +57,17 @@ type Inbound =
   | ChatMessage
   | SignalMessage
   | PlaybackMessage
+  | PlaybackControlStateMessage
   | ShareStateMessage
   | { type: 'peer-joined'; clientId: string; displayName: string }
   | { type: 'peer-left'; clientId: string }
+
+const defaultPlaybackControl: PlaybackControlState = {
+  controlMode: 'dual',
+  controllerId: null,
+  playReady: [],
+  peerCount: 1,
+}
 
 export function usePartyRoom(roomId: string | null, displayName: string) {
   const clientIdRef = useRef<string | null>(null)
@@ -57,6 +78,8 @@ export function usePartyRoom(roomId: string | null, displayName: string) {
   const [connected, setConnected] = useState(false)
   const [peers, setPeers] = useState<Peer[]>([])
   const [chat, setChat] = useState<ChatMessage[]>([])
+  const [playbackControl, setPlaybackControl] =
+    useState<PlaybackControlState>(defaultPlaybackControl)
   const wsRef = useRef<WebSocket | null>(null)
 
   const signalHandlersRef = useRef(new Set<(msg: SignalMessage) => void>())
@@ -106,6 +129,7 @@ export function usePartyRoom(roomId: string | null, displayName: string) {
     ws.onclose = () => {
       setConnected(false)
       wsRef.current = null
+      setPlaybackControl(defaultPlaybackControl)
     }
 
     ws.onmessage = (ev) => {
@@ -136,6 +160,14 @@ export function usePartyRoom(roomId: string | null, displayName: string) {
           case 'playback':
             playbackHandlersRef.current.forEach((fn) => fn(msg))
             break
+          case 'playback-control-state':
+            setPlaybackControl({
+              controlMode: msg.controlMode,
+              controllerId: msg.controllerId,
+              playReady: msg.playReady,
+              peerCount: msg.peerCount,
+            })
+            break
           case 'share-state':
             shareStateHandlersRef.current.forEach((fn) => fn(msg))
             break
@@ -159,9 +191,26 @@ export function usePartyRoom(roomId: string | null, displayName: string) {
     [send],
   )
 
-  const sendPlayback = useCallback(
+  const sendPlaybackIntent = useCallback(
     (action: string, currentTime?: number, videoUrl?: string) =>
-      send({ type: 'playback', action, currentTime, videoUrl }),
+      send({ type: 'playback-intent', action, currentTime, videoUrl }),
+    [send],
+  )
+
+  const setPlaybackMode = useCallback(
+    (mode: PlaybackControlMode) =>
+      send({ type: 'playback-control', op: 'setMode', mode }),
+    [send],
+  )
+
+  const claimController = useCallback(
+    () => send({ type: 'playback-control', op: 'claimController' }),
+    [send],
+  )
+
+  const setController = useCallback(
+    (controllerId: string) =>
+      send({ type: 'playback-control', op: 'setController', controllerId }),
     [send],
   )
 
@@ -175,9 +224,13 @@ export function usePartyRoom(roomId: string | null, displayName: string) {
     connected,
     peers,
     chat,
+    playbackControl,
     sendChat,
     sendSignal,
-    sendPlayback,
+    sendPlaybackIntent,
+    setPlaybackMode,
+    claimController,
+    setController,
     sendShareState,
     subscribeSignals,
     subscribePlayback,
