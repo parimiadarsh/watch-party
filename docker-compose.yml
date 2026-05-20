@@ -1,0 +1,43 @@
+# Watch Party — production stack (one public port on the frontend/nginx container).
+# Usage: copy .env.example to .env, set secrets, then: docker compose up -d --build
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: watch-party-backend
+    restart: unless-stopped
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars!!}
+    volumes:
+      - watchparty-data:/app/data
+    expose:
+      - "8080"
+    networks:
+      - watchparty
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID:-}}
+    container_name: watch-party-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    networks:
+      - watchparty
+
+networks:
+  watchparty:
+    driver: bridge
+
+volumes:
+  watchparty-data:

@@ -28,8 +28,19 @@ export function GoogleSignInButton({ onSuccess, compact = false }: Props) {
     }
   }
 
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : ''
+  const needsTailscaleOrigin =
+    origin.includes('.ts.net') || origin.startsWith('http://100.')
+
   return (
     <div className={`google-signin${compact ? ' google-signin--compact' : ''}`}>
+      {needsTailscaleOrigin && (
+        <p className="google-signin__origin-hint muted">
+          Google sign-in requires adding this origin in Cloud Console:{' '}
+          <code>{origin}</code>
+        </p>
+      )}
       <GoogleLogin
         onSuccess={(c) => void handleSuccess(c)}
         onError={() => setError('Google sign-in failed or was dismissed.')}

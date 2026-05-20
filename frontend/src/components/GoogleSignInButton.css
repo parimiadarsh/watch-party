@@ -9,6 +9,17 @@
   align-items: flex-end;
 }
 
+.google-signin__origin-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  max-width: 280px;
+}
+
+.google-signin__origin-hint code {
+  word-break: break-all;
+}
+
 .google-signin__error {
   margin: 0;
   font-size: 0.8rem;

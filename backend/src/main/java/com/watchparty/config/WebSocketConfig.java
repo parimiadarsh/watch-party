@@ -27,7 +27,12 @@ public class WebSocketConfig implements WebSocketConfigurer {
 	public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
 		registry.addHandler(roomWebSocketHandler, "/ws")
 			.addInterceptors(roomHandshakeInterceptor)
-			.setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*");
+			.setAllowedOriginPatterns(
+					"http://localhost:*",
+					"http://127.0.0.1:*",
+					"http://*:*",
+					"https://*.ts.net",
+					"http://*.ts.net");
 	}
 
 }

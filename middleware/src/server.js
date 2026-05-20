@@ -3,7 +3,7 @@ import express from 'express'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 
 const port = Number(process.env.PORT) || 3001
-const springBaseUrl = process.env.SPRING_BOOT_URL || 'http://localhost:8080'
+const springBaseUrl = process.env.SPRING_BOOT_URL || 'http://127.0.0.1:8080'
 
 const app = express()
 
