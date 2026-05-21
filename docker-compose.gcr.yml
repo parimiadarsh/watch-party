@@ -1,16 +1,18 @@
-# Pull all images from GCR — no local build.
-#
-# .env (repo root): GCP_PROJECT_ID, IMAGE_TAG, optional GCR_*_REPO names, JWT_SECRET, etc.
-#
-# Before pull (Windows):
-#   $env:GCP_PROJECT_ID="project-332623"
-#   .\scripts\auth-docker-gcr.ps1
+# Production stack from GCR: backend, middleware, frontend, nginx.
 #
 #   docker compose -f docker-compose.gcr.yml pull
 #   docker compose -f docker-compose.gcr.yml up -d
 #
-# Default image repos: watch-party-backend / watch-party-middleware / watch-party-frontend.
-# If you tagged differently in GCR (e.g. watchparty-back), set GCR_*_REPO in .env.
+# Public entry: nginx on host :80 and :443 (config: nginx/default.conf).
+# Copy the whole repo (including nginx/) to the VM. If nginx.conf was created as a
+# directory by Docker, remove it: rm -rf nginx.conf
+#   https://fermiwatch.duckdns.org  → 301  →  http://fermiwatch.duckdns.org
+#   http://fermiwatch.duckdns.org   → proxy → frontend (internal :80)
+#
+# TLS certs on the VM (once): certbot certonly --standalone -d fermiwatch.duckdns.org
+# Stop host nginx if installed so ports 80/443 are free: sudo systemctl stop nginx
+#
+# Open GCP firewall: tcp:80, tcp:443
 
 services:
   backend:
@@ -49,8 +51,23 @@ services:
       - middleware
     environment:
       BACKEND_URL: http://middleware:3001
+    expose:
+      - "80"
+    networks:
+      - watchparty
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: watch-party-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
     networks:
       - watchparty
 
