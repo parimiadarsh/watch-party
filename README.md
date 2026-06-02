@@ -67,162 +67,14 @@ Restart **both** `npm run dev` and `spring-boot:run` after changing env files.
 
 Without Google env vars, the app still works as a guest; only saved rooms need sign-in.
 
-## Deploy on one VM (Docker Compose)
+## Deploy on a VM (DuckDNS + nginx)
 
-Two containers (backend + nginx/frontend), **one port** for users (default **80**). The frontend proxies `/api` and `/ws` to the backend — no Vite, no middleware, no second public port.
+If **https://fermiwatch.duckdns.org** shows **“Welcome to nginx!”**, the default site is still enabled — not your app. See **`docs/nginx-fermiwatch.example.conf`** and run on the VM:
 
-### Prerequisites
-
-- Docker Engine + Docker Compose v2 on the VM
-- (Optional) Tailscale or firewall rule allowing inbound **80**
-
-### Steps
-
-1. Clone the repo on the VM and go to the repo root.
-
-2. Create env file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edit `.env`:
-
-   - Set **`JWT_SECRET`** to a long random string.
-   - Set **`GOOGLE_CLIENT_ID`** and **`VITE_GOOGLE_CLIENT_ID`** to the same Web client id (or leave empty for guest-only).
-   - Change **`HTTP_PORT`** if 80 is already in use (e.g. `8080:80` → set `HTTP_PORT=8080`).
-
-3. Build and start:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-4. Open the app:
-
-   - `http://<vm-public-ip>` or `http://<vm-tailscale-ip>`
-   - With Tailscale Serve: `tailscale serve --bg --https=443 http://127.0.0.1:80` then use `https://<machine>.ts.net`
-
-5. Google OAuth: add the **exact** browser origin to **Authorized JavaScript origins** (e.g. `http://100.x.y.z` or `https://your-machine.ts.net`).
-
-### Useful commands
-
-```bash
-docker compose ps
-docker compose logs -f
-docker compose down
-docker compose up -d --build   # after code changes
-```
-
-Saved rooms (H2) persist in the Docker volume **`watchparty-data`**.
-
-## Push images to Google Container Registry (GCR)
-
-Build on your machine (or CI), push to **`gcr.io/PROJECT_ID`**, pull on the VM.
-
-### One-time GCP setup
-
-1. [Create or pick a GCP project](https://console.cloud.google.com/) and note the **Project ID**.
-2. Enable the **Container Registry API** (or use Artifact Registry — see note below).
-3. Authenticate Docker with GCR:
-
-   ```powershell
-   gcloud auth login
-   gcloud config set project YOUR_PROJECT_ID
-   gcloud auth configure-docker gcr.io
-   ```
-
-4. Grant push permission: your account needs **Storage Admin** on the project (GCR uses Cloud Storage).
-
-### Build and push (Windows)
-
-From the repo root, set env vars (or add to `.env`):
-
-```powershell
-$env:GCP_PROJECT_ID = "your-gcp-project-id"
-$env:VITE_GOOGLE_CLIENT_ID = "your-client-id.apps.googleusercontent.com"   # optional
-.\scripts\push-images-gcr.ps1
-# Or with a version tag:
-.\scripts\push-images-gcr.ps1 -Tag "1.0.0"
-```
-
-Linux/macOS:
-
-```bash
-chmod +x scripts/push-images-gcr.sh
-GCP_PROJECT_ID=your-gcp-project-id VITE_GOOGLE_CLIENT_ID=... ./scripts/push-images-gcr.sh
-```
-
-Images pushed:
-
-- `gcr.io/PROJECT_ID/watch-party-backend:TAG`
-- `gcr.io/PROJECT_ID/watch-party-middleware:TAG`
-- `gcr.io/PROJECT_ID/watch-party-frontend:TAG`
-
-Also tags **`latest`** when `TAG` is not `latest`.
-
-### Run on VM from GCR (no build on server)
-
-On the VM, in `.env`:
-
-```
-GCP_PROJECT_ID=your-gcp-project-id
-IMAGE_TAG=latest
-JWT_SECRET=...
-GOOGLE_CLIENT_ID=...
-```
-
-Authenticate **before** `pull` (required — otherwise `Unauthenticated request` / `downloadArtifacts`):
-
-**Windows (host or VM with gcloud):**
-
-```powershell
-$env:GCP_PROJECT_ID = "project-332623"
-.\scripts\auth-docker-gcr.ps1
-```
-
-**Linux VM:**
-
-```bash
-export GCP_PROJECT_ID=project-332623
-chmod +x scripts/auth-docker-gcr.sh
-./scripts/auth-docker-gcr.sh
-```
-
-**Manual fallback** (if `docker-credential-gcloud` is not on PATH):
-
-```powershell
-gcloud auth login
-gcloud config set project project-332623
-gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
-```
-
-Then:
-
-```bash
-docker compose -f docker-compose.gcr.yml pull
-docker compose -f docker-compose.gcr.yml up -d
-```
-
-**GCP VM:** attach a service account with **Artifact Registry Reader** (or **Storage Object Viewer** for legacy GCR), then run `gcloud auth configure-docker gcr.io` on the VM or use the metadata-based login that Compute Engine provides.
-
-### GCR pull/push errors
-
-| Error | Fix |
-|--------|-----|
-| **`Unauthenticated`** after `docker login` | Docker may still use **credHelpers `"gcr.io": "gcloud"`** → broken `docker-credential-gcloud`. Run **`.\scripts\auth-docker-gcr.ps1`** (it strips that) or edit `%USERPROFILE%\.docker\config.json` and remove `gcr.io` under `credHelpers`. Also log in to **both** `gcr.io` and **`us-docker.pkg.dev`** (script does both). |
-| **WSL vs Windows** | Run `gcloud`, `docker login`, and `docker compose` in the **same** environment (all Windows or all WSL). |
-| **Still unauthenticated** | Run `gcloud auth login` with an account that has **Artifact Registry Reader** on the project. In Console: **IAM** → grant `roles/artifactregistry.reader` (pull) or `roles/artifactregistry.writer` (push). |
-| **`docker-credential-gcloud` not found** | Use `auth-docker-gcr.ps1` — it logs in with a token. Or add Cloud SDK `bin` to PATH and restart Docker Desktop. |
-| **Service account on GCE** | Attach SA with **Artifact Registry Reader**, or: `gcloud auth activate-service-account --key-file=KEY.json` then run `auth-docker-gcr.sh`. |
-| **Token expired (~1 h)** | Re-run `auth-docker-gcr.ps1` before `docker compose pull`. |
-| **or it may not exist** | Wrong image repo name. Check GCR in Console: the path after `gcr.io/PROJECT/` must match `.env`. Short names: set `GCR_BACKEND_REPO=watchparty-back`, `GCR_MIDDLEWARE_REPO=watchparty-mid`, `GCR_FRONTEND_REPO=watchparty-front`. |
-
-This starts **backend**, **middleware** (Node proxy), and **frontend** (nginx). Requests go: browser → nginx → middleware → Spring Boot.
-
-**Two-container stack (no middleware):** set `BACKEND_URL=http://backend:8080` on the frontend service or use `docker-compose.yml` with a local build.
-
-**Note:** Google recommends [Artifact Registry](https://cloud.google.com/artifact-registry) (`REGION-docker.pkg.dev/...`) for new projects. GCR (`gcr.io/...`) still works; to use Artifact Registry, change the registry prefix in the push scripts and `docker-compose.gcr.yml`.
+1. Build frontend (`npm run build`), run backend on port **8080**.
+2. Copy the example to `/etc/nginx/sites-available/fermiwatch`, set `root` to your `frontend/dist` path.
+3. `sudo rm -f /etc/nginx/sites-enabled/default` then `sudo nginx -t && sudo systemctl reload nginx`.
+4. HTTPS: `sudo certbot --nginx -d fermiwatch.duckdns.org`
 
 ## Run (local development)
 
@@ -314,11 +166,6 @@ If everyone is on the same tailnet, teammates can open:
 
 | Folder / file | Role |
 |---------------|------|
-| `docker-compose.yml` | Production: build locally, frontend port 80 |
-| `docker-compose.gcr.yml` | Production from GCR: backend + middleware + frontend |
-| `.env.example` | Compose / GCR env template (copy to `.env`) |
-| `scripts/push-images-gcr.ps1` | Build + push to `gcr.io` (Windows) |
-| `scripts/push-images-gcr.sh` | Same for Linux/macOS |
-| `frontend/`   | React app; production image = nginx + static build |
+| `frontend/`   | React app (Vite dev server; proxies `/api` and `/ws` to the backend) |
 | `backend/`    | REST (`/api`) + WebSocket room relay (`/ws`); H2 file DB for saved rooms |
-| `middleware/` | Optional dev-only Express proxy (not used in Compose) |
+| `middleware/` | Optional Express proxy for local dev |
